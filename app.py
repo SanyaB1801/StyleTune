@@ -8,10 +8,12 @@ import io
 import base64
 
 # ======================== CONFIG ==========================
-# These keys must be set as environment variables or in .streamlit/secrets.toml
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-SPOTIFY_CLIENT_ID = st.secrets["SPOTIFY_CLIENT_ID"]
-SPOTIFY_CLIENT_SECRET = st.secrets["SPOTIFY_CLIENT_SECRET"]
+# 🔑 Set your API keys here
+import os
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 # ======================== SETUP ===========================
 genai.configure(api_key=GEMINI_API_KEY)
