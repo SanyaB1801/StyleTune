@@ -5,6 +5,9 @@ import io
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # 🔑 Set your API keys here
 import os
 
