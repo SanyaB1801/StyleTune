@@ -3,5 +3,3 @@ google-generativeai
 spotipy
 python-dotenv
 Pillow
-numpy
-requests
