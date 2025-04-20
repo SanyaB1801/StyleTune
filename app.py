@@ -1,77 +1,83 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 from PIL import Image
-import tensorflow as tf
-from tensorflow.keras.preprocessing.image import img_to_array
-import numpy as np
-from spotipy.oauth2 import SpotifyClientCredentials
-import spotipy
 import io
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 
-# Define your Spotify credentials
-SPOTIPY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
-SPOTIPY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
+# 🔑 Set your API keys here
+import os
 
-# Setup Spotipy
-client_credentials_manager = SpotifyClientCredentials(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET)
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# Define the vibe features
-vibe_features = {
-    "lofi beats": {"valence": (0.4, 0.7), "energy": (0.2, 0.4)},
-    "chill indie": {"valence": (0.5, 0.8), "acousticness": (0.5, 1.0)},
-    "confident jazz": {"valence": (0.5, 0.9), "instrumentalness": (0.7, 1.0)},
-    # Add more vibes as needed
-}
+# 🧠 Configure Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
-# Load the trained model for fashion style classification (pre-trained CNN model)
-model = tf.keras.models.load_model('fashion_style_model.h5')  # Make sure to provide your model path
+# 🎧 Configure Spotify
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=SPOTIFY_CLIENT_ID,
+    client_secret=SPOTIFY_CLIENT_SECRET
+))
 
-# Function to process image and predict fashion style
-def process_image(image):
-    img = image.resize((128, 128))  # Resize to match the model input size
-    img_array = img_to_array(img) / 255.0  # Normalize image
-    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-    return img_array
+# 🏠 Streamlit App UI
+st.title("🎨 Fashion Vibe → 🎧 Music Match")
+st.markdown("Upload an outfit and get a music recommendation that fits your vibe!")
 
-# Function to recommend a song based on fashion style
-def recommend_song(vibe):
-    if vibe not in vibe_features:
-        return None
-    
-    target_features = vibe_features[vibe]
-    results = sp.recommendations(seed_genres=[vibe], limit=3, target_valence=target_features.get("valence", (0, 1))[1],
-                                 target_energy=target_features.get("energy", (0, 1))[1], target_acousticness=target_features.get("acousticness", (0, 1))[1])
+uploaded_img = st.file_uploader("Upload your outfit image", type=["jpg", "jpeg", "png"])
 
-    if results['tracks']:
-        track_uri = results['tracks'][0]['uri']
-        return track_uri
-    return None
+if uploaded_img:
+    st.image(uploaded_img, caption="Your outfit", use_column_width=True)
+    with st.spinner("Analyzing outfit and finding your vibe..."):
 
-# Streamlit UI
-st.title("Fashion Style to Music Recommendation")
-st.write("Upload an image of your outfit, and we'll suggest a song to match your vibe!")
+        # 📤 Prepare image for Gemini
+        img_bytes = uploaded_img.read()
+        image_part = {
+            "mime_type": uploaded_img.type,
+            "data": img_bytes
+        }
 
-# Upload image
-uploaded_image = st.file_uploader("Choose an image...", type="jpg")
+        # 🤖 Ask Gemini for fashion analysis and song vibe
+        prompt = (
+            "You are a fashion and music expert. Analyze the outfit in this image, "
+            "describe its style and vibe, and recommend a song (include name and artist) "
+            "that matches the vibe. Format it like:\n"
+            "🧥 Outfit Description: ...\n🎵 Recommended Song: ..."
+        )
 
-if uploaded_image:
-    # Process image and predict fashion style
-    image = Image.open(uploaded_image)
-    image_array = process_image(image)
-    
-    # Predict fashion style (replace with your model)
-    predicted_style = model.predict(image_array)  # You should map this to actual styles
-    vibe = "lofi beats"  # Replace this with the actual prediction logic based on your model output
+        try:
+            response = model.generate_content([prompt, image_part], stream=False)
+            output_text = response.text
+            st.markdown(output_text)
 
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-    st.write(f"Predicted Fashion Style: {vibe}")
+            # 🎯 Extract song name and artist (basic parsing)
+            if "🎵 Recommended Song:" in output_text:
+                song_line = output_text.split("🎵 Recommended Song:")[-1].strip()
+                st.markdown("🔍 Searching for song preview...")
 
-    # Recommend a song
-    song_uri = recommend_song(vibe)
-    if song_uri:
-        track_url = f"https://open.spotify.com/track/{song_uri.split(':')[2]}"
-        st.write("Recommended song for your vibe:")
-        st.markdown(f"[Listen on Spotify]({track_url})")
-    else:
-        st.write("Sorry, no song recommendations available at the moment.")
+                # 🔍 Search in Spotify
+                results = sp.search(q=song_line, type="track", limit=1)
+                tracks = results.get('tracks', {}).get('items', [])
+
+                if tracks:
+                    track = tracks[0]
+                    song_name = track['name']
+                    artist = track['artists'][0]['name']
+                    preview_url = track['preview_url']
+                    track_url = track['external_urls']['spotify']
+
+                    st.markdown(f"**{song_name}** by *{artist}*")
+                    st.markdown(f"[🔗 Listen on Spotify]({track_url})")
+
+                    if preview_url:
+                        st.audio(preview_url, format="audio/mp3")
+                    else:
+                        st.warning("Preview not available for this track.")
+                else:
+                    st.error("Couldn't find this song on Spotify.")
+            else:
+                st.warning("Couldn't parse the song from the response.")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
