@@ -4,8 +4,9 @@ from PIL import Image
 import io
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-
+import re
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # 🔑 Set your API keys here
@@ -59,23 +60,26 @@ if uploaded_img:
             output_text = response.text
             st.markdown(output_text)
 
-            # 🎯 Extract song name and artist (basic parsing)
-            if "🎵 Recommended Song:" in output_text:
-                song_line = output_text.split("🎵 Recommended Song:")[-1].strip()
-                st.markdown("🔍 Searching for song preview...")
+            # ✅ Use regex to extract exact song name and artist
+            song_match = re.search(r'🎵 Recommended Song:\s*["“]?(.+?)["”]?\s*', output_text)
+            artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
 
-                # 🔍 Search in Spotify
-                results = sp.search(q=song_line, type="track", limit=1)
+            if song_match and artist_match:
+                song_name = song_match.group(1).strip()
+                artist_name = artist_match.group(1).strip()
+                query = f"track:{song_name} artist:{artist_name}"
+
+                st.markdown(f"🔍 Searching for: **{song_name}** by *{artist_name}*")
+
+                results = sp.search(q=query, type="track", limit=1)
                 tracks = results.get('tracks', {}).get('items', [])
 
                 if tracks:
                     track = tracks[0]
-                    song_name = track['name']
-                    artist = track['artists'][0]['name']
                     preview_url = track['preview_url']
                     track_url = track['external_urls']['spotify']
 
-                    st.markdown(f"**{song_name}** by *{artist}*")
+                    st.markdown(f"**{track['name']}** by *{track['artists'][0]['name']}*")
                     st.markdown(f"[🔗 Listen on Spotify]({track_url})")
 
                     if preview_url:
@@ -83,8 +87,8 @@ if uploaded_img:
                     else:
                         st.warning("Preview not available for this track.")
                 else:
-                    st.error("Couldn't find this song on Spotify.")
+                    st.error("❌ Couldn't find this song on Spotify.")
             else:
-                st.warning("Couldn't parse the song from the response.")
+                st.warning("⚠️ Couldn't extract song name or artist from the response.")
         except Exception as e:
             st.error(f"❌ Error: {e}")
