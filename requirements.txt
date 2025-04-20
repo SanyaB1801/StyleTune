@@ -1,1 +1,7 @@
-streamlit google-generativeai spotipy
+streamlit
+google-generativeai
+spotipy
+python-dotenv
+Pillow
+numpy
+requests
