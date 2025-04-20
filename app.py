@@ -26,11 +26,18 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 
 # ======================== FUNCTIONS =======================
 def describe_outfit(image_bytes):
-    response = model.generate_content([
-        "Describe the outfit in this image in detail. Include clothing style, colors, fabric, vibe, and occasion.",
-        image_bytes
-    ])
-    return response.text.strip()
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        response = model.generate_content([
+            "Describe the outfit in this image in detail. Focus on fashion style, vibe, and color.",
+            image
+        ])
+        return response.text
+    except Exception as e:
+        st.error(f"❌ Error: {e}")
+        return None
 
 def get_song_suggestion(description):
     prompt = f"""
