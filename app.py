@@ -61,7 +61,7 @@ if uploaded_img:
             st.markdown(output_text)
 
             # ✅ Use regex to extract exact song name and artist
-            song_match = re.search(r'🎵 Recommended Song:\s*["“]?(.+?)["”]?\s*', output_text)
+            song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
             artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
 
             if song_match and artist_match:
