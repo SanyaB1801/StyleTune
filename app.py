@@ -1,88 +1,94 @@
 import streamlit as st
-import numpy as np
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+import google.generativeai as genai
+from PIL import Image
+import io
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from PIL import Image
-import random
 import re
 from dotenv import load_dotenv
+
 load_dotenv()
+
+# 🔑 Set your API keys here
 import os
 
-# === Setup ===
-st.set_page_config(page_title="Fashion Vibe → Music Match", layout="centered")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# === Spotify Auth ===
+# 🧠 Configure Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+
+# 🎧 Configure Spotify
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-    client_secret=os.getenv("SPOTIFY_CLIENT_SECRET")
+    client_id=SPOTIFY_CLIENT_ID,
+    client_secret=SPOTIFY_CLIENT_SECRET
 ))
 
-# === Label Encoder (same order as training) ===
-label_list = ['Blazer', 'Dress', 'Hoodie', 'Jacket', 'Jeans', 'Kurta', 'Shorts', 'Skirt', 'Sweater', 'Tshirt']
-inv_label_encoder = {i: name for i, name in enumerate(label_list)}
+# 🏠 Streamlit App UI
+st.title("🎨 Fashion Vibe → 🎧 Music Match")
+st.markdown("Upload an outfit and get a music recommendation that fits your vibe!")
 
-# === Fashion → Genre Mapping ===
-fashion_to_genre = {
-    "Blazer": "smooth jazz", "Dress": "lofi beats", "Jeans": "indie pop",
-    "Jacket": "rock", "Kurta": "indian classical", "Shorts": "tropical house",
-    "Skirt": "dream pop", "Sweater": "acoustic", "Tshirt": "pop", "Hoodie": "trap"
-}
-
-# === Fetch Spotify Songs ===
-def fetch_spotify_tracks(genre):
-    results = sp.search(q=genre, limit=20, type='track', market='US')
-    tracks = results['tracks']['items']
-    return [(t['name'], t['artists'][0]['name'], t['external_urls']['spotify']) for t in tracks]
-
-# === Load Model ===
-@st.cache_resource
-def load_model():
-    base_model = MobileNetV2(include_top=False, input_shape=(128,128,3), weights='imagenet')
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(128, activation='relu')(x)
-    predictions = Dense(len(label_list), activation='softmax')(x)
-    model = Model(inputs=base_model.input, outputs=predictions)
-
-    # Load trained weights (path to your trained weights file)
-    model.load_weights("mobilenet_fashion_weights.h5")
-    return model
-
-model = load_model()
-
-# === Image Prediction ===
-def predict_fashion(img_pil):
-    img = img_pil.resize((128, 128))
-    img_array = image.img_to_array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    pred = np.argmax(model.predict(img_array), axis=1)[0]
-    return inv_label_encoder[pred]
-
-# === UI ===
-st.title("👗 Fashion Vibe → Music Match 🎶")
-st.markdown("Upload an outfit photo to discover the music that matches your fashion vibe!")
-
-uploaded_img = st.file_uploader("Upload your fashion image", type=['jpg', 'jpeg', 'png'])
+uploaded_img = st.file_uploader("Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img:
-    img_pil = Image.open(uploaded_img).convert("RGB")
-    st.image(img_pil, caption="Uploaded Image", use_column_width=True)
+    st.image(uploaded_img, caption="Your outfit", use_column_width=True)
+    with st.spinner("Analyzing outfit and finding your vibe..."):
 
-    with st.spinner("Analyzing fashion style..."):
-        fashion = predict_fashion(img_pil)
-        genre = fashion_to_genre.get(fashion, "lofi beats")
-        song_list = fetch_spotify_tracks(genre)
-        song, artist, link = random.choice(song_list)
+        # 📤 Prepare image for Gemini
+        img_bytes = uploaded_img.read()
+        image_part = {
+            "mime_type": uploaded_img.type,
+            "data": img_bytes
+        }
 
-    st.markdown(f"### 🎯 Style Detected: **{fashion}**")
-    st.markdown(f"### 🎵 Genre Vibe: **{genre}**")
-    st.markdown(f"### 🎧 Listening Suggestion:")
-    st.markdown(f"- **{song}** by *{artist}*")
-    st.markdown(f"[🔗 Listen on Spotify]({link})")
+        # 🤖 Ask Gemini for fashion analysis and song vibe
+        prompt = (
+            "You are a fashion and music expert. Analyze the outfit in this image, "
+            "describe its style and vibe, and recommend a song (include name and artist) "
+            "that matches the vibe.\n\n"
+            "Requirements:\n"
+            "- The song must be available on Spotify.\n"
+            "- Format strictly like below (in separate lines):\n"
+            "🧥 Outfit Description: ...\n"
+            "🎵 Recommended Song: <Song Name>\n"
+            "👤 Artist: <Artist Name>"
+        )
+        try:
+            response = model.generate_content([prompt, image_part], stream=False)
+            output_text = response.text
+            st.markdown(output_text)
 
-    st.audio(link.replace("open.", "p.scdn.co/mp3-preview/").replace("/track/", "/"), format="audio/mp3")
+            # ✅ Use regex to extract exact song name and artist
+            song_match = re.search(r'🎵 Recommended Song:\s*["“]?(.+?)["”]?\s*', output_text)
+            artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
+
+            if song_match and artist_match:
+                song_name = song_match.group(1).strip()
+                artist_name = artist_match.group(1).strip()
+                query = f"track:{song_name} artist:{artist_name}"
+
+                st.markdown(f"🔍 Searching for: **{song_name}** by *{artist_name}*")
+
+                results = sp.search(q=query, type="track", limit=1)
+                tracks = results.get('tracks', {}).get('items', [])
+
+                if tracks:
+                    track = tracks[0]
+                    preview_url = track['preview_url']
+                    track_url = track['external_urls']['spotify']
+
+                    st.markdown(f"**{track['name']}** by *{track['artists'][0]['name']}*")
+                    st.markdown(f"[🔗 Listen on Spotify]({track_url})")
+
+                    if preview_url:
+                        st.audio(preview_url, format="audio/mp3")
+                    else:
+                        st.warning("Preview not available for this track.")
+                else:
+                    st.error("❌ Couldn't find this song on Spotify.")
+            else:
+                st.warning("⚠️ Couldn't extract song name or artist from the response.")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
