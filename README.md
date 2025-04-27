@@ -2,8 +2,6 @@
 
 **StyleTune** is a web application that matches your fashion style to the perfect music vibe! Upload an image of your outfit, select the vibe you're feeling, and get a personalized song recommendation.
 
----
-
 ## Features
 - **Outfit Analysis:** Upload an image of your outfit, and our AI will analyze its style and vibe.
 - **Music Recommendation:** Based on your outfit and selected vibe, the AI recommends a song from Spotify that fits the mood.
@@ -71,29 +69,3 @@
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-### Contributing
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-xyz`).
-3. Commit your changes (`git commit -am 'Add feature xyz'`).
-4. Push to the branch (`git push origin feature-xyz`).
-5. Create a new Pull Request.
-
-### Acknowledgments
-- Thanks to the [Spotify API](https://developer.spotify.com/) for enabling seamless song integration.
-- Powered by the [Google Gemini AI](https://developers.google.com/genai/) for fashion and vibe analysis.
-
----
-
-#### **Enjoy styling your outfits with the perfect music vibe! 🎶** 
-```
-
-### Explanation:
-- **Introduction:** Gives a brief about the project.
-- **Technologies Used:** Lists the technologies and services used in the project.
-- **Installation & Setup:** Provides a clear guide to setting up the project, including dependencies, API key configuration, and running the app.
-- **Usage:** Describes how the app works.
-- **Feedback Database:** Describes how feedback is stored.
-- **License & Contributing:** Information about contributing to the project and licensing.
