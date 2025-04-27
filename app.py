@@ -38,6 +38,8 @@ with st.expander("ℹ️ About This App"):
         3. Get a perfect song recommendation you can vibe to! 🎵
     """)
 
+selected_vibe = st.text_input("🎧 What vibe are you feeling today? (e.g., Chill, Sporty, EDM, etc.)")
+
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img:
@@ -68,6 +70,7 @@ if uploaded_img:
                 "that matches the vibe. DO NOT GIVE ANY OTHER EXTRA INFO LIKE VERSIONS.\n\n"
                 "Requirements:\n"
                 "- The song must be available on Spotify.\n"
+                f"- The song should fit the vibe {selected_vibe}\n"
                 "- Format strictly like below (in separate lines):\n"
                 "🧥 Outfit Description: ...\n"
                 "🎵 Recommended Song: <Song Name>\n"
