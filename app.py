@@ -146,10 +146,8 @@ if uploaded_img:
             except Exception as e:
                 st.error(f"❌ Error: {e}")
 
-import pandas as pd
-
 # Add after displaying album art + song
-st.markdown("---")
+
 st.subheader("⭐ Rate Your Recommendation")
 
 # Create 5 clickable stars
