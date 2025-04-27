@@ -64,16 +64,16 @@ if uploaded_img:
 
             # 🤖 Fashion + Music Analysis Prompt
             prompt = (
-                "You are a fashion and music expert. Analyze the outfit in this image, "
-                "describe its style and vibe, and recommend a song (include name and artist) "
-                "that matches the vibe. DO NOT GIVE ANY OTHER EXTRA INFO LIKE VERSIONS.\n\n"
-                "Requirements:\n"
-                "- The song must be available on Spotify.\n"
-                f"- The song should fit the vibe {selected_vibe}\n"
-                "- Format strictly like below (in separate lines):\n"
+                "You are a fashion and photography expert. Analyze the outfit in this image, "
+                "describe its style and vibe, recommend a song (include name and artist), "
+                "and suggest potential edits to enhance the image. The edits can include adjustments "
+                "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
+                "that would match the outfit's vibe. Do not give extra information or instructions. Format "
+                "the output as follows:\n\n"
                 "🧥 Outfit Description: ...\n"
                 "🎵 Recommended Song: <Song Name>\n"
-                "👤 Artist: <Artist Name>"
+                "👤 Artist: <Artist Name>\n"
+                "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
             )
             try:
                 response = model.generate_content([prompt, image_part], stream=False)
@@ -83,11 +83,13 @@ if uploaded_img:
                 outfit_desc_match = re.search(r'🧥 Outfit Description:\s*(.+)', output_text)
                 song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
                 artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
+                edits_match = re.search(r'🎨 Suggested Edits:\s*(.+)', output_text)
 
                 if outfit_desc_match and song_match and artist_match:
                     outfit_description = outfit_desc_match.group(1).strip()
                     song_name = song_match.group(1).strip()
                     artist_name = artist_match.group(1).strip()
+                    suggested_edits = edits_match.group(1).strip().split(',')
 
                     # 🎯 Display fashion vibe
                     st.success("✨ Outfit & Music Vibe Found!")
@@ -139,6 +141,35 @@ if uploaded_img:
 
                     else:
                         st.error("❌ Couldn't find this song on Spotify.")
+
+
+                    st.subheader("🎨 Suggested Edits for Your Photo")
+                    for edit in suggested_edits:
+                        st.write(f"- {edit.strip()}")
+
+                    # Ask user to proceed with edits
+                    proceed = st.button("Proceed with Edits")
+
+                    if proceed:
+                        # Apply the edits to the image
+                        image = Image.open(uploaded_img)
+
+                        # Apply suggested edits dynamically based on user input
+                        for edit in suggested_edits:
+                            if "saturation" in edit.lower():
+                                factor = st.slider("Saturation", 0.0, 2.0, 1.0)
+                                enhancer = ImageEnhance.Color(image)
+                                image = enhancer.enhance(factor)
+                            elif "contrast" in edit.lower():
+                                factor = st.slider("Contrast", 0.0, 2.0, 1.0)
+                                enhancer = ImageEnhance.Contrast(image)
+                                image = enhancer.enhance(factor)
+                            elif "brightness" in edit.lower():
+                                factor = st.slider("Brightness", 0.0, 2.0, 1.0)
+                                enhancer = ImageEnhance.Brightness(image)
+                                image = enhancer.enhance(factor)
+
+                        st.image(image, caption="Edited Image", use_container_width=True)
                 else:
                     st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
 
