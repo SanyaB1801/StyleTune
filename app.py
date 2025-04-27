@@ -36,9 +36,9 @@ st.write("""
         3. Get a perfect song recommendation you can vibe to! 🎵
     """)
 
-selected_vibe = st.text_input("🎧 What vibe are you feeling today?")
-
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
+
+selected_vibe = st.text_input("🎧 What vibe are you feeling today?")
 
 if uploaded_img:
     st.subheader("👕 Your Uploaded Outfit")
