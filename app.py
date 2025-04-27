@@ -29,9 +29,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 st.set_page_config(page_title="Fashion Vibe → Music Match", page_icon="🎧")
 st.title("🎨 Fashion Vibe → 🎧 Music Match")
 st.markdown("Upload your outfit and get a **music recommendation** that fits your vibe! ✨")
-
-with st.expander("ℹ️ About This App"):
-    st.write("""
+st.write("""
         Welcome to **Fashion Vibe → Music Match**!  
         1. Upload an image of your outfit.  
         2. AI analyzes your fashion style and vibe.  
