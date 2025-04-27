@@ -145,3 +145,41 @@ if uploaded_img:
 
             except Exception as e:
                 st.error(f"❌ Error: {e}")
+
+# Add after displaying album art + song
+st.markdown("---")
+st.subheader("⭐ Rate Your Recommendation")
+
+# Create 5 clickable stars
+rating = 0
+cols = st.columns(5)
+for i, col in enumerate(cols):
+    if col.button(f"{i+1} ⭐"):
+        rating = i + 1
+
+# After clicking a star
+if rating > 0:
+    st.success(f"Thanks for rating {rating} star(s)! ⭐")
+
+    # Save the feedback
+    feedback_data = {
+        "Outfit Description": [outfit_description],
+        "Selected Vibe": [selected_vibe],
+        "Recommended Song": [song_name],
+        "Artist": [artist_name],
+        "Rating": [rating]
+    }
+
+    feedback_df = pandas.DataFrame(feedback_data)
+
+    # Append to existing CSV or create new one
+    feedback_file = "feedback_database.csv"
+    try:
+        existing_df = pandas.read_csv(feedback_file)
+        updated_df = pandas.concat([existing_df, feedback_df], ignore_index=True)
+    except FileNotFoundError:
+        updated_df = feedback_df
+
+    updated_df.to_csv(feedback_file, index=False)
+    st.success("✅ Your feedback has been recorded successfully!")
+ed.")
