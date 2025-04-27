@@ -181,27 +181,13 @@ if uploaded_img:
         try:
             # Try to read existing file
             existing_df = pd.read_csv(feedback_file)
-            
-            # Debugging: Show existing data
-            st.write("Existing data in file:")
-            st.write(existing_df)
-            
-            # Check if the file is empty, and if so, create a new DataFrame
-            if existing_df.empty:
-                st.write("File is empty, creating a new file with correct columns.")
-                existing_df = pd.DataFrame(columns=["Outfit Description", "Selected Vibe", "Recommended Song", "Artist", "Rating"])
-            
             updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
             
         except FileNotFoundError:
             # If the file doesn't exist, create a new DataFrame
             st.write("File not found, creating a new file.")
             updated_df = feedback_df
-    
-        # Debugging: Log the DataFrame we're about to write
-        st.write("Data to be written:")
-        st.write(updated_df)
-    
+
         # Write to the CSV file
         updated_df.to_csv(feedback_file, index=False)
         st.success("✅ Your feedback has been recorded successfully!")
