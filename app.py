@@ -147,68 +147,68 @@ if uploaded_img:
             except Exception as e:
                 st.error(f"❌ Error: {e}")
     
-    st.subheader("🎨 Suggested Edits for Your Photo")
+st.subheader("🎨 Suggested Edits for Your Photo")
+for edit in suggested_edits:
+    st.write(f"- {edit.strip()}")
+
+# Ask user to proceed with edits
+proceed = st.button("Proceed with Edits")
+
+if proceed:
+    # Apply the edits to the image
+    image = Image.open(uploaded_img)
+
+    # Apply suggested edits dynamically based on user input
     for edit in suggested_edits:
-        st.write(f"- {edit.strip()}")
-    
-    # Ask user to proceed with edits
-    proceed = st.button("Proceed with Edits")
-    
-    if proceed:
-        # Apply the edits to the image
-        image = Image.open(uploaded_img)
-    
-        # Apply suggested edits dynamically based on user input
-        for edit in suggested_edits:
-            if "saturation" in edit.lower():
-                factor = st.slider("Saturation", 0.0, 2.0, 1.0)
-                enhancer = ImageEnhance.Color(image)
-                image = enhancer.enhance(factor)
-            elif "contrast" in edit.lower():
-                factor = st.slider("Contrast", 0.0, 2.0, 1.0)
-                enhancer = ImageEnhance.Contrast(image)
-                image = enhancer.enhance(factor)
-            elif "brightness" in edit.lower():
-                factor = st.slider("Brightness", 0.0, 2.0, 1.0)
-                enhancer = ImageEnhance.Brightness(image)
-                image = enhancer.enhance(factor)
-    
-        st.image(image, caption="Edited Image", use_container_width=True)
+        if "saturation" in edit.lower():
+            factor = st.slider("Saturation", 0.0, 2.0, 1.0)
+            enhancer = ImageEnhance.Color(image)
+            image = enhancer.enhance(factor)
+        elif "contrast" in edit.lower():
+            factor = st.slider("Contrast", 0.0, 2.0, 1.0)
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(factor)
+        elif "brightness" in edit.lower():
+            factor = st.slider("Brightness", 0.0, 2.0, 1.0)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(factor)
+
+    st.image(image, caption="Edited Image", use_container_width=True)
 
 
-    # Add after displaying album art + song
-    st.subheader("⭐ Rate Your Recommendation")
-    
-    # Initialize session state for rating if not already set
-    if "rating" not in st.session_state:
-        st.session_state.rating = 0
-    
-    # Create 5 clickable stars
-    cols = st.columns(5)
-    for i, col in enumerate(cols):
-        if col.button(f"{i+1} ⭐"):
-            st.session_state.rating = i + 1
-    
-    # After clicking a star
-    if st.session_state.rating > 0:
-        st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
-    
-        # Save the feedback
-        feedback_data = {
-            "Outfit Description": [outfit_description],
-            "Selected Vibe": [selected_vibe],
-            "Recommended Song": [song_name],
-            "Artist": [artist_name],
-            "Rating": [st.session_state.rating]
-        }
-        feedback_df = pd.DataFrame(feedback_data)
-        feedback_file = "feedback_database.csv"
-    
-        try:
-            existing_df = pd.read_csv(feedback_file)
-            updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
-        except FileNotFoundError:
-            updated_df = feedback_df
-    
-        updated_df.to_csv(feedback_file, index=False)
-        st.success("✅ Your feedback has been recorded successfully!")
+# Add after displaying album art + song
+st.subheader("⭐ Rate Your Recommendation")
+
+# Initialize session state for rating if not already set
+if "rating" not in st.session_state:
+    st.session_state.rating = 0
+
+# Create 5 clickable stars
+cols = st.columns(5)
+for i, col in enumerate(cols):
+    if col.button(f"{i+1} ⭐"):
+        st.session_state.rating = i + 1
+
+# After clicking a star
+if st.session_state.rating > 0:
+    st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
+
+    # Save the feedback
+    feedback_data = {
+        "Outfit Description": [outfit_description],
+        "Selected Vibe": [selected_vibe],
+        "Recommended Song": [song_name],
+        "Artist": [artist_name],
+        "Rating": [st.session_state.rating]
+    }
+    feedback_df = pd.DataFrame(feedback_data)
+    feedback_file = "feedback_database.csv"
+
+    try:
+        existing_df = pd.read_csv(feedback_file)
+        updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
+    except FileNotFoundError:
+        updated_df = feedback_df
+
+    updated_df.to_csv(feedback_file, index=False)
+    st.success("✅ Your feedback has been recorded successfully!")
