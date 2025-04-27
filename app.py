@@ -104,7 +104,7 @@ if uploaded_img:
                         )
 
                     # 🔍 Search Spotify
-                    query = f"track:{song_name} artist:{artist_name}"
+                    query = f"{song_name} {artist_name}"
                     results = sp.search(q=query, type="track", limit=1)
                     tracks = results.get('tracks', {}).get('items', [])
 
