@@ -68,17 +68,12 @@ if uploaded_img:
                 "describe its style and vibe, recommend a song (include name and artist), "
                 "and suggest potential edits to enhance the image. The edits can include adjustments "
                 "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
-                "that would match the outfit's vibe. Do not give extra information or instructions."
-                "The values of the parameters in suggested edits must lie between 0.00 - 2.00 where 1.00 is no change."
-                "Format the output as follows:\n\n"
+                "that would match the outfit's vibe. Do not give extra information or instructions. Format "
+                "the output as follows:\n\n"
                 "🧥 Outfit Description: ...\n"
                 "🎵 Recommended Song: <Song Name>\n"
                 "👤 Artist: <Artist Name>\n"
-                "🎨 Suggested Edits description in one line: ... "
-                "🎨Brightness=<value>"
-                "🎨Saturation=<value>"
-                "🎨Sharpness=<value>"
-                "🎨Contrast=<value>"
+                "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
             )
             try:
                 response = model.generate_content([prompt, image_part], stream=False)
@@ -88,21 +83,13 @@ if uploaded_img:
                 outfit_desc_match = re.search(r'🧥 Outfit Description:\s*(.+)', output_text)
                 song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
                 artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
-                edits_match = re.search(r'🎨 Suggested Edits description in one line:\s*(.+)', output_text)
-                brightness_match = re.search(r'🎨Brightness\s*([0-2](?:\.[0-9]{1,2})?)', output_text)
-                saturation_match = re.search(r'🎨Saturation\s*([0-2](?:\.[0-9]{1,2})?)', output_text)
-                sharpness_match = re.search(r'🎨Sharpness\s*([0-2](?:\.[0-9]{1,2})?)', output_text)
-                contrast_match = re.search(r'🎨Contrast\s*([0-2](?:\.[0-9]{1,2})?)', output_text)
+                edits_match = re.search(r'🎨 Suggested Edits:\s*(.+)', output_text)
 
-                if outfit_desc_match and song_match and artist_match and edits_match and brightness_match and saturation_match and sharpness_match and contrast_match:
+                if outfit_desc_match and song_match and artist_match:
                     outfit_description = outfit_desc_match.group(1).strip()
                     song_name = song_match.group(1).strip()
                     artist_name = artist_match.group(1).strip()
-                    suggested_edits = edits_match.group(1).strip()
-                    brightness_value = float(brightness_match.group(1))
-                    saturation_value = float(saturation_match.group(1))
-                    sharpness_value = float(sharpness_match.group(1))
-                    contrast_value = float(contrast_match.group(1))
+                    suggested_edits = edits_match.group(1).strip().split(',')
 
                     # 🎯 Display fashion vibe
                     st.success("✨ Outfit & Music Vibe Found!")
@@ -146,6 +133,12 @@ if uploaded_img:
                         with col4:
                             # Song name and artist only (no separate link)
                             st.markdown(f"<h4>{track['name']} by {track['artists'][0]['name']}</h4>", unsafe_allow_html=True)
+
+                        if preview_url:
+                            st.audio(preview_url, format="audio/mp3")
+                        else:
+                            st.warning("Preview not available for this track.")
+
                     else:
                         st.error("❌ Couldn't find this song on Spotify.")
                 else:
@@ -155,7 +148,8 @@ if uploaded_img:
                 st.error(f"❌ Error: {e}")
     
     st.subheader("🎨 Suggested Edits for Your Photo")
-    st.write("suggested_edits")
+    for edit in suggested_edits:
+        st.write(f"- {edit.strip()}")
     
     # Ask user to proceed with edits
     proceed = st.button("Proceed with Edits")
@@ -164,18 +158,20 @@ if uploaded_img:
         # Apply the edits to the image
         image = Image.open(uploaded_img)
     
-        # Apply saturation
-        enhancer = ImageEnhance.Color(image)
-        image = enhancer.enhance(saturation_value)
-        # Apply contrast
-        enhancer = ImageEnhance.Contrast(image)
-        image = enhancer.enhance(contrast_value)
-        #Apply brightness
-        enhancer = ImageEnhance.Brightness(image)
-        image = enhancer.enhance(brightness_value)
-        #Apply sharpness
-        enhancer = ImageEnhance.Sharpness(image)
-        image = enhancer.enhance(sharpness_value)
+        # Apply suggested edits dynamically based on user input
+        for edit in suggested_edits:
+            if "saturation" in edit.lower():
+                factor = st.slider("Saturation", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Color(image)
+                image = enhancer.enhance(factor)
+            elif "contrast" in edit.lower():
+                factor = st.slider("Contrast", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Contrast(image)
+                image = enhancer.enhance(factor)
+            elif "brightness" in edit.lower():
+                factor = st.slider("Brightness", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Brightness(image)
+                image = enhancer.enhance(factor)
     
         st.image(image, caption="Edited Image", use_container_width=True)
 
@@ -216,4 +212,3 @@ if uploaded_img:
     
         updated_df.to_csv(feedback_file, index=False)
         st.success("✅ Your feedback has been recorded successfully!")
-
