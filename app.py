@@ -47,7 +47,7 @@ if uploaded_img:
         prompt = (
             "You are a fashion and music expert. Analyze the outfit in this image, "
             "describe its style and vibe, and recommend a song (include name and artist) "
-            "that matches the vibe.\n\n"
+            "that matches the vibe. DO NOT GIVE ANY OTHER EXTRA INFO LIKE VERSIONS.\n\n"
             "Requirements:\n"
             "- The song must be available on Spotify.\n"
             "- Format strictly like below (in separate lines):\n"
