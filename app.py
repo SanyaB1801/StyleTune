@@ -129,10 +129,8 @@ if uploaded_img:
                                 unsafe_allow_html=True
                             )
                         with col4:
-                            # Song name and artist nicely
+                            # Song name and artist only (no separate link)
                             st.markdown(f"<h4>{track['name']} by {track['artists'][0]['name']}</h4>", unsafe_allow_html=True)
-                            # Listen on Spotify link (optional, because image is now clickable)
-                            st.markdown(f"[🔗 Listen on Spotify]({track_url})")
 
                         if preview_url:
                             st.audio(preview_url, format="audio/mp3")
