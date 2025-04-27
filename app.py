@@ -8,6 +8,7 @@ import re
 from dotenv import load_dotenv
 import os
 import time
+import pandas as pd
 
 # 🔑 Load API keys
 load_dotenv()
@@ -170,13 +171,13 @@ if uploaded_img:
             "Rating": [rating]
         }
     
-        feedback_df = pandas.DataFrame(feedback_data)
+        feedback_df = pd.DataFrame(feedback_data)
     
         # Append to existing CSV or create new one
         feedback_file = "feedback_database.csv"
         try:
-            existing_df = pandas.read_csv(feedback_file)
-            updated_df = pandas.concat([existing_df, feedback_df], ignore_index=True)
+            existing_df = pd.read_csv(feedback_file)
+            updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
         except FileNotFoundError:
             updated_df = feedback_df
     
