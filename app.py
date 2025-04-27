@@ -148,7 +148,6 @@ if uploaded_img:
                 st.error(f"❌ Error: {e}")
 
     # Add after displaying album art + song
-    
     st.subheader("⭐ Rate Your Recommendation")
     
     # Create 5 clickable stars
@@ -176,16 +175,16 @@ if uploaded_img:
         # Append to existing CSV or create new one
         feedback_file = "feedback_database.csv"
         try:
-            print("Reading existing feedback database...")
+            # Try to read existing file
             existing_df = pd.read_csv(feedback_file)
+            if existing_df.empty:
+                # If the file is empty, create a new one with the correct columns
+                existing_df = pd.DataFrame(columns=["Outfit Description", "Selected Vibe", "Recommended Song", "Artist", "Rating"])
             updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
         except FileNotFoundError:
-            print("No existing feedback database found, creating new one...")
+            # If the file doesn't exist, create a new DataFrame
             updated_df = feedback_df
     
-        # Debug: Check if the data is ready to be saved
-        print("Saving the following data to feedback database:")
-        print(updated_df)
-    
+        # Write to the CSV file
         updated_df.to_csv(feedback_file, index=False)
         st.success("✅ Your feedback has been recorded successfully!")
