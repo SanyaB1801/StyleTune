@@ -148,16 +148,19 @@ if uploaded_img:
     # Add after displaying album art + song
     st.subheader("⭐ Rate Your Recommendation")
     
+    # Initialize session state for rating if not already set
+    if "rating" not in st.session_state:
+        st.session_state.rating = 0
+    
     # Create 5 clickable stars
-    rating = 0
     cols = st.columns(5)
     for i, col in enumerate(cols):
         if col.button(f"{i+1} ⭐"):
-            rating = i + 1
+            st.session_state.rating = i + 1
     
     # After clicking a star
-    if rating > 0:
-        st.success(f"Thanks for rating {rating} star(s)! ⭐")
+    if st.session_state.rating > 0:
+        st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
     
         # Save the feedback
         feedback_data = {
@@ -165,19 +168,17 @@ if uploaded_img:
             "Selected Vibe": [selected_vibe],
             "Recommended Song": [song_name],
             "Artist": [artist_name],
-            "Rating": [rating]
+            "Rating": [st.session_state.rating]
         }
         feedback_df = pd.DataFrame(feedback_data)
         feedback_file = "feedback_database.csv"
+    
         try:
-            # Try to read existing file
             existing_df = pd.read_csv(feedback_file)
             updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
-            
         except FileNotFoundError:
-            # If the file doesn't exist, create a new DataFrame
             updated_df = feedback_df
-
-        # Write to the CSV file
+    
         updated_df.to_csv(feedback_file, index=False)
         st.success("✅ Your feedback has been recorded successfully!")
+
