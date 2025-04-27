@@ -33,7 +33,7 @@ st.markdown("Upload an outfit and get a music recommendation that fits your vibe
 uploaded_img = st.file_uploader("Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img:
-    st.image(uploaded_img, caption="Your outfit", use_column_width=True)
+    st.image(uploaded_img, caption="Your outfit", use_container_width=True)
     with st.spinner("Analyzing outfit and finding your vibe..."):
 
         # 📤 Prepare image for Gemini
