@@ -119,9 +119,19 @@ if uploaded_img:
                         # Album art + song info
                         col3, col4 = st.columns([1, 2])
                         with col3:
-                            st.image(album_art_url, caption="Album Art", width=200)
+                            # Clickable album art
+                            st.markdown(
+                                f"""
+                                <a href="{track_url}" target="_blank">
+                                    <img src="{album_art_url}" alt="Album Art" style="width:200px; border-radius:10px; margin-top:10px;">
+                                </a>
+                                """,
+                                unsafe_allow_html=True
+                            )
                         with col4:
-                            st.markdown(f"**{track['name']}** by *{track['artists'][0]['name']}*")
+                            # Song name and artist nicely
+                            st.markdown(f"<h4>{track['name']} by {track['artists'][0]['name']}</h4>", unsafe_allow_html=True)
+                            # Listen on Spotify link (optional, because image is now clickable)
                             st.markdown(f"[🔗 Listen on Spotify]({track_url})")
 
                         if preview_url:
