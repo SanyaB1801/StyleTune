@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
+from PIL import Image, ImageEnhance
 import io
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -141,40 +141,40 @@ if uploaded_img:
 
                     else:
                         st.error("❌ Couldn't find this song on Spotify.")
-
-
-                    st.subheader("🎨 Suggested Edits for Your Photo")
-                    for edit in suggested_edits:
-                        st.write(f"- {edit.strip()}")
-
-                    # Ask user to proceed with edits
-                    proceed = st.button("Proceed with Edits")
-
-                    if proceed:
-                        # Apply the edits to the image
-                        image = Image.open(uploaded_img)
-
-                        # Apply suggested edits dynamically based on user input
-                        for edit in suggested_edits:
-                            if "saturation" in edit.lower():
-                                factor = st.slider("Saturation", 0.0, 2.0, 1.0)
-                                enhancer = ImageEnhance.Color(image)
-                                image = enhancer.enhance(factor)
-                            elif "contrast" in edit.lower():
-                                factor = st.slider("Contrast", 0.0, 2.0, 1.0)
-                                enhancer = ImageEnhance.Contrast(image)
-                                image = enhancer.enhance(factor)
-                            elif "brightness" in edit.lower():
-                                factor = st.slider("Brightness", 0.0, 2.0, 1.0)
-                                enhancer = ImageEnhance.Brightness(image)
-                                image = enhancer.enhance(factor)
-
-                        st.image(image, caption="Edited Image", use_container_width=True)
                 else:
                     st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
 
             except Exception as e:
                 st.error(f"❌ Error: {e}")
+    
+    st.subheader("🎨 Suggested Edits for Your Photo")
+    for edit in suggested_edits:
+        st.write(f"- {edit.strip()}")
+    
+    # Ask user to proceed with edits
+    proceed = st.button("Proceed with Edits")
+    
+    if proceed:
+        # Apply the edits to the image
+        image = Image.open(uploaded_img)
+    
+        # Apply suggested edits dynamically based on user input
+        for edit in suggested_edits:
+            if "saturation" in edit.lower():
+                factor = st.slider("Saturation", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Color(image)
+                image = enhancer.enhance(factor)
+            elif "contrast" in edit.lower():
+                factor = st.slider("Contrast", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Contrast(image)
+                image = enhancer.enhance(factor)
+            elif "brightness" in edit.lower():
+                factor = st.slider("Brightness", 0.0, 2.0, 1.0)
+                enhancer = ImageEnhance.Brightness(image)
+                image = enhancer.enhance(factor)
+    
+        st.image(image, caption="Edited Image", use_container_width=True)
+
 
     # Add after displaying album art + song
     st.subheader("⭐ Rate Your Recommendation")
