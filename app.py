@@ -26,11 +26,11 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 ))
 
 # 🏠 Streamlit App UI
-st.set_page_config(page_title="Fashion Vibe → Music Match", page_icon="🎧")
-st.title("🎨 Fashion Vibe → 🎧 Music Match")
+st.set_page_config(page_title="StyleTune", page_icon="🎧")
+st.title("StyleTune 🎧")
 st.markdown("Upload your outfit and get a **music recommendation** that fits your vibe! ✨")
 st.write("""
-        Welcome to **Fashion Vibe → Music Match**!  
+        Welcome to **StyleTune**!  
         1. Upload an image of your outfit.  
         2. AI analyzes your fashion style and vibe.  
         3. Get a perfect song recommendation you can vibe to! 🎵
