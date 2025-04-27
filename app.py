@@ -98,8 +98,8 @@ if uploaded_img:
                             <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
                                 <h4>🧥 Outfit Description</h4>
                                 <p style="color: #333;">{outfit_description}</p>
-                                <h4>🎵 Recommended Song</h4>
-                                <p><strong>{song_name}</strong> by *{artist_name}*</p>
+                                # <h4>🎵 Recommended Song</h4>
+                                # <p><strong>{song_name}</strong> by *{artist_name}*</p>
                             </div>
                             """,
                             unsafe_allow_html=True
