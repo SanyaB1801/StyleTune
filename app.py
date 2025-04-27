@@ -167,17 +167,8 @@ if uploaded_img:
             "Artist": [artist_name],
             "Rating": [rating]
         }
-    
         feedback_df = pd.DataFrame(feedback_data)
-    
         feedback_file = "feedback_database.csv"
-        
-        # Debugging: Check if the file exists
-        if os.path.exists(feedback_file):
-            st.write(f"File exists: {feedback_file}")
-        else:
-            st.write(f"File does not exist, will create new file: {feedback_file}")
-        
         try:
             # Try to read existing file
             existing_df = pd.read_csv(feedback_file)
@@ -185,7 +176,6 @@ if uploaded_img:
             
         except FileNotFoundError:
             # If the file doesn't exist, create a new DataFrame
-            st.write("File not found, creating a new file.")
             updated_df = feedback_df
 
         # Write to the CSV file
