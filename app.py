@@ -53,12 +53,15 @@ if "artist_name" not in st.session_state:
 if "track" not in st.session_state:
     st.session_state.track = None
 
+# Upload image and enter vibe
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
 selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)", value="")
 
-if uploaded_img and st.session_state.output is None:
-    st.subheader("👕 Your Uploaded Outfit")
+# --- Generate Button ---
+generate_button = st.button("✨ Generate Music & Vibe", disabled=not uploaded_img)
 
+if generate_button and uploaded_img:
+    st.subheader("👕 Your Uploaded Outfit")
     st.image(uploaded_img, caption="Your outfit", use_container_width=True)
 
     with st.spinner("Analyzing outfit and matching your music vibe... 🎶"):
@@ -119,7 +122,6 @@ if uploaded_img and st.session_state.output is None:
             st.error(f"❌ Error: {e}")
 
 # --- After processing ---
-
 if st.session_state.output:
     st.success("✨ Outfit & Music Vibe Found!")
 
