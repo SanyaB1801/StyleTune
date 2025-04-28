@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 import os
 import time
 import pandas as pd
-from PIL import ImageEnhance
 
 # 🔑 Load API keys
 load_dotenv()
@@ -182,7 +181,9 @@ if st.session_state.output and st.session_state.suggested_edits:
     )
     
     # Proceed button
-    if st.button("✨ Proceed with Edits"):    
+    if st.button("✨ Proceed with Edits"):
+        from PIL import ImageEnhance
+    
         edited_image = st.session_state.original_image.copy()
     
         for edit in st.session_state.suggested_edits:
@@ -199,13 +200,8 @@ if st.session_state.output and st.session_state.suggested_edits:
             elif "sharpness" in edit:
                 enhancer = ImageEnhance.Sharpness(edited_image)
                 edited_image = enhancer.enhance(2.0)
-        
-        st.session_state.new_image = edited_image
-        st.success("✅ Edits applied! Scroll down to view the edited image.")
-
-if "edited_image" in st.session_state:
-    st.subheader("🖼️ Edited Image")
-    st.image(st.session_state.new_image, caption="Edited Outfit Image", use_column_width=True)
+    
+        st.image(edited_image, caption="✨ Edited Image", use_column_width=True)
     
     # 🎯 Feedback shown ONLY after track is found
     st.subheader("⭐ Rate Your Recommendation")
