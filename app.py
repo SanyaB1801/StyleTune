@@ -167,40 +167,41 @@ if st.session_state.output:
     # After recommending songs and all that
 
 # Show suggested edits
-st.markdown(
-    f"""
-    <div style="background-color: #e6f2ff; padding: 20px; border-radius: 10px; margin-top: 20px;">
-        <h4>🎨 Suggested Edits</h4>
-        <ul>
-        {''.join(f"<li>{edit.strip()}</li>" for edit in st.session_state.suggested_edits)}
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# Proceed button
-if st.button("✨ Proceed with Edits"):
-    from PIL import ImageEnhance
-
-    edited_image = st.session_state.original_image.copy()
-
-    for edit in st.session_state.suggested_edits:
-        edit = edit.lower().strip()
-        if "brightness" in edit:
-            enhancer = ImageEnhance.Brightness(edited_image)
-            edited_image = enhancer.enhance(1.2)
-        elif "saturation" in edit or "color" in edit:
-            enhancer = ImageEnhance.Color(edited_image)
-            edited_image = enhancer.enhance(1.3)
-        elif "contrast" in edit:
-            enhancer = ImageEnhance.Contrast(edited_image)
-            edited_image = enhancer.enhance(1.2)
-        elif "sharpness" in edit:
-            enhancer = ImageEnhance.Sharpness(edited_image)
-            edited_image = enhancer.enhance(2.0)
-
-    st.image(edited_image, caption="✨ Edited Image", use_column_width=True)
+if st.session_state.output and st.session_state.suggested_edits:
+    st.markdown(
+        f"""
+        <div style="background-color: #e6f2ff; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <h4>🎨 Suggested Edits</h4>
+            <ul>
+            {''.join(f"<li>{edit.strip()}</li>" for edit in st.session_state.suggested_edits)}
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    # Proceed button
+    if st.button("✨ Proceed with Edits"):
+        from PIL import ImageEnhance
+    
+        edited_image = st.session_state.original_image.copy()
+    
+        for edit in st.session_state.suggested_edits:
+            edit = edit.lower().strip()
+            if "brightness" in edit:
+                enhancer = ImageEnhance.Brightness(edited_image)
+                edited_image = enhancer.enhance(1.2)
+            elif "saturation" in edit or "color" in edit:
+                enhancer = ImageEnhance.Color(edited_image)
+                edited_image = enhancer.enhance(1.3)
+            elif "contrast" in edit:
+                enhancer = ImageEnhance.Contrast(edited_image)
+                edited_image = enhancer.enhance(1.2)
+            elif "sharpness" in edit:
+                enhancer = ImageEnhance.Sharpness(edited_image)
+                edited_image = enhancer.enhance(2.0)
+    
+        st.image(edited_image, caption="✨ Edited Image", use_column_width=True)
     
     # 🎯 Feedback shown ONLY after track is found
     st.subheader("⭐ Rate Your Recommendation")
