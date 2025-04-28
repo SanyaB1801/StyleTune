@@ -1,161 +1,230 @@
 import streamlit as st
-from PIL import Image, ImageEnhance, ImageOps
-import base64
-import requests
-import time
-import random
+import google.generativeai as genai
+from PIL import Image, ImageEnhance
+import io
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import re
 from dotenv import load_dotenv
 import os
-from io import BytesIO
-import google.generativeai as genai
+import time
+import pandas as pd
 
-# Load environment variables
+# 🔑 Load API keys
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-# Check if API keys are present
-if not GEMINI_API_KEY or not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
-    st.error("API keys are missing. Please check your .env file.")
-    st.stop()
-
-# Configure Gemini API
+# 🧠 Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro-vision')
+model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
-# Spotify API Authentication
-def authenticate_spotify(client_id, client_secret):
-    url = "https://accounts.spotify.com/api/token"
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {"grant_type": "client_credentials"}
-    response = requests.post(url, headers=headers, data=data, auth=(client_id, client_secret))
-    if response.status_code == 200:
-        return response.json().get("access_token")
-    else:
-        return None
+# 🎧 Configure Spotify
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=SPOTIFY_CLIENT_ID,
+    client_secret=SPOTIFY_CLIENT_SECRET
+))
 
-access_token = authenticate_spotify(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+# 🏠 Streamlit App UI
+st.set_page_config(page_title="StyleTune", page_icon="🎧")
+st.title("StyleTune 🎧")
+st.markdown("Upload your outfit and get a **music recommendation** that fits your vibe! ✨")
+st.write("""
+        Welcome to **StyleTune**!  
+        1. Upload an image of your outfit.  
+        2. AI analyzes your fashion style and vibe.  
+        3. Get a perfect song recommendation you can vibe to! 🎵
+    """)
 
-def search_spotify_track(query, access_token):
-    url = "https://api.spotify.com/v1/search"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    params = {"q": query, "type": "track", "limit": 1}
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        items = response.json().get("tracks", {}).get("items", [])
-        if items:
-            track = items[0]
-            track_name = track["name"]
-            artist_name = track["artists"][0]["name"]
-            preview_url = track.get("preview_url")
-            external_url = track["external_urls"]["spotify"]
-            return track_name, artist_name, preview_url, external_url
-    return None, None, None, None
+# --- Session State ---
+if "output" not in st.session_state:
+    st.session_state.output = None
+if "edited_image" not in st.session_state:
+    st.session_state.edited_image = None
+if "suggested_edits" not in st.session_state:
+    st.session_state.suggested_edits = []
+if "outfit_description" not in st.session_state:
+    st.session_state.outfit_description = ""
+if "song_name" not in st.session_state:
+    st.session_state.song_name = ""
+if "artist_name" not in st.session_state:
+    st.session_state.artist_name = ""
+if "track" not in st.session_state:
+    st.session_state.track = None
 
-def get_gemini_suggestions(image_data):
-    prompt = (
-        "This is an image uploaded by the user. "
-        "Suggest 3 minor but meaningful edits to enhance the image. "
-        "Be specific (e.g., 'increase brightness', 'add slight vignette', 'sharpen details'). "
-        "Respond with a numbered list only, no extra words."
-    )
-    try:
-        response = model.generate_content([prompt, image_data])
-        suggestions_text = response.text
-        suggestions = [line.split('. ', 1)[1] for line in suggestions_text.split('\n') if '. ' in line]
-        return suggestions
-    except Exception as e:
-        print("Error with Gemini API:", e)
-        return []
+uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
+selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)")
 
-def apply_edit(image, edit, value=None):
-    if 'brightness' in edit.lower() and value:
-        enhancer = ImageEnhance.Brightness(image)
-        return enhancer.enhance(value)
-    elif 'contrast' in edit.lower() and value:
-        enhancer = ImageEnhance.Contrast(image)
-        return enhancer.enhance(value)
-    elif 'sharpness' in edit.lower() and value:
-        enhancer = ImageEnhance.Sharpness(image)
-        return enhancer.enhance(value)
-    elif 'vignette' in edit.lower():
-        vignette = Image.new('L', image.size, 0)
-        for x in range(image.size[0]):
-            for y in range(image.size[1]):
-                vignette.putpixel((x, y), int(255 * (1 - ((x - image.size[0]/2)**2 + (y - image.size[1]/2)**2) / (image.size[0]*image.size[1]/4))))
-        vignette = vignette.resize(image.size)
-        return Image.composite(image, ImageOps.colorize(vignette, (0,0,0), (0,0,0)), vignette)
-    else:
-        return image  # No edit applied
+if uploaded_img and st.session_state.output is None:
+    st.subheader("👕 Your Uploaded Outfit")
 
-# Streamlit UI
-st.set_page_config(page_title="StyleTune 🎵👗", page_icon="🎵")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(uploaded_img, caption="Your outfit", use_container_width=True)
 
-st.title("🎵👗 StyleTune: Match Your Look to a Tune!")
+    with col2:
+        with st.spinner("Analyzing outfit and matching your music vibe... 🎶"):
+            progress_bar = st.progress(0)
+            for percent in range(100):
+                time.sleep(0.01)
+                progress_bar.progress(percent + 1)
 
-uploaded_img = st.file_uploader("Upload your outfit photo 📸", type=["jpg", "jpeg", "png"])
+            # 📤 Prepare image for Gemini
+            img_bytes = uploaded_img.read()
+            image_part = {
+                "mime_type": uploaded_img.type,
+                "data": img_bytes
+            }
 
-if uploaded_img:
-    image = Image.open(uploaded_img)
-    st.image(image, caption="Your Uploaded Outfit", use_column_width=True)
+            # 🤖 Fashion + Music Analysis Prompt
+            prompt = (
+                "You are a fashion and photography expert. Analyze the outfit in this image, "
+                "describe its style and vibe, recommend a song (include name and artist), "
+                "and suggest potential edits to enhance the image. The edits can include adjustments "
+                "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
+                "that would match the outfit's vibe. Do not give extra information or instructions. Format "
+                "the output as follows:\n\n"
+                "🧥 Outfit Description: ...\n"
+                "🎵 Recommended Song: <Song Name>\n"
+                "👤 Artist: <Artist Name>\n"
+                "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
+            )
+            try:
+                response = model.generate_content([prompt, image_part], stream=False)
+                output_text = response.text
+                st.session_state.output = output_text
 
-    with st.spinner('Analyzing your photo...'):
-        time.sleep(1)  # Small delay for better UX
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        img_bytes = buffered.getvalue()
-        img_b64 = base64.b64encode(img_bytes).decode()
-        image_data = {"mime_type": "image/jpeg", "data": img_b64}
-        suggested_edits = get_gemini_suggestions(image_data)
+                # ✅ Extract fields
+                outfit_desc_match = re.search(r'🧥 Outfit Description:\s*(.+)', output_text)
+                song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
+                artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
+                edits_match = re.search(r'🎨 Suggested Edits:\s*(.+)', output_text)
 
-    if suggested_edits:
-        st.subheader("🎨 Suggested Edits for Your Photo")
+                if outfit_desc_match and song_match and artist_match:
+                    st.session_state.outfit_description = outfit_desc_match.group(1).strip()
+                    st.session_state.song_name = song_match.group(1).strip()
+                    st.session_state.artist_name = artist_match.group(1).strip()
+                    st.session_state.suggested_edits = edits_match.group(1).strip().split(',')
 
-        for edit in suggested_edits:
-            st.markdown(f"- {edit}")
+                    # 🔍 Search Spotify
+                    query = f"{st.session_state.song_name} {st.session_state.artist_name}"
+                    results = sp.search(q=query, type="track", limit=1)
+                    tracks = results.get('tracks', {}).get('items', [])
 
-        if st.button("✨ Proceed with Edits"):
-            edited_image = image.copy()
-            for edit in suggested_edits:
-                if 'brightness' in edit.lower():
-                    brightness = st.slider('Adjust Brightness', 0.5, 2.0, 1.0)
-                    edited_image = apply_edit(edited_image, edit, brightness)
-                elif 'contrast' in edit.lower():
-                    contrast = st.slider('Adjust Contrast', 0.5, 2.0, 1.0)
-                    edited_image = apply_edit(edited_image, edit, contrast)
-                elif 'sharpness' in edit.lower():
-                    sharpness = st.slider('Adjust Sharpness', 0.5, 2.0, 1.0)
-                    edited_image = apply_edit(edited_image, edit, sharpness)
-                elif 'vignette' in edit.lower():
-                    edited_image = apply_edit(edited_image, edit)
+                    if tracks:
+                        st.session_state.track = tracks[0]
+                    else:
+                        st.session_state.track = None
+                else:
+                    st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
 
-            st.image(edited_image, caption="Edited Photo", use_column_width=True)
+# --- After processing ---
 
-    st.subheader("🎵 Your Recommended Track")
-    with st.spinner('Finding the perfect track for you...'):
-        time.sleep(0.5)
-        random_keywords = ['fashion', 'style', 'confidence', 'cool', 'chill', 'energetic', 'mood']
-        search_query = random.choice(random_keywords)
-        track_name, artist_name, preview_url, external_url = search_spotify_track(search_query, access_token)
+if st.session_state.output:
+    st.success("✨ Outfit & Music Vibe Found!")
+    with st.container():
+        st.markdown(
+            f"""
+            <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
+                <h4>🧥 Outfit Description</h4>
+                <p style="color: #333;">{st.session_state.outfit_description}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    if track_name:
-        st.success(f"**{track_name}** by *{artist_name}*")
+    if st.session_state.track:
+        track = st.session_state.track
+        preview_url = track['preview_url']
+        track_url = track['external_urls']['spotify']
+        album_art_url = track['album']['images'][0]['url']
+
+        st.markdown("## 🎶 Listen to Your Vibe")
+
+        col3, col4 = st.columns([1, 2])
+        with col3:
+            st.markdown(
+                f"""
+                <a href="{track_url}" target="_blank">
+                    <img src="{album_art_url}" alt="Album Art" style="width:200px; border-radius:10px; margin-top:10px;">
+                </a>
+                """,
+                unsafe_allow_html=True
+            )
+        with col4:
+            st.markdown(f"<h4>{track['name']} by {track['artists'][0]['name']}</h4>", unsafe_allow_html=True)
+
         if preview_url:
-            st.audio(preview_url, format='audio/mp3')
-        st.markdown(f"[Listen on Spotify]({external_url})")
+            st.audio(preview_url, format="audio/mp3")
+        else:
+            st.warning("Preview not available for this track.")
     else:
-        st.error("Couldn't find a track. Please try again later.")
+        st.error("❌ Couldn't find this song on Spotify.")
 
-    st.subheader("⭐ Rate Your Experience")
-    rating = st.slider('How would you rate this suggestion?', 1, 5, 3)
+# --- Edits Section ---
+if uploaded_img and st.session_state.suggested_edits:
+    st.subheader("🎨 Suggested Edits for Your Photo")
+    for edit in st.session_state.suggested_edits:
+        st.write(f"- {edit.strip()}")
 
-    if st.button("Submit Rating"):
-        with st.spinner('Saving your feedback...'):
-            time.sleep(0.5)
-            # Here you could save rating to a database or file
-            st.success(f"Thanks for rating us {rating} stars! 🌟")
+    proceed = st.button("✨ Apply Suggested Edits")
 
-else:
-    st.info("👆 Upload an image to get started!")
+    if proceed and st.session_state.edited_image is None:
+        # Reopen uploaded image
+        image = Image.open(uploaded_img)
 
+        for edit in st.session_state.suggested_edits:
+            if "saturation" in edit.lower():
+                enhancer = ImageEnhance.Color(image)
+                image = enhancer.enhance(1.3)
+            elif "contrast" in edit.lower():
+                enhancer = ImageEnhance.Contrast(image)
+                image = enhancer.enhance(1.2)
+            elif "brightness" in edit.lower():
+                enhancer = ImageEnhance.Brightness(image)
+                image = enhancer.enhance(1.2)
+            elif "sharpness" in edit.lower():
+                enhancer = ImageEnhance.Sharpness(image)
+                image = enhancer.enhance(1.5)
+
+        st.session_state.edited_image = image
+
+    if st.session_state.edited_image:
+        st.image(st.session_state.edited_image, caption="Edited Image", use_container_width=True)
+
+# --- Rating ---
+st.subheader("⭐ Rate Your Recommendation")
+
+if "rating" not in st.session_state:
+    st.session_state.rating = 0
+
+cols = st.columns(5)
+for i, col in enumerate(cols):
+    if col.button(f"{i+1} ⭐"):
+        st.session_state.rating = i + 1
+
+if st.session_state.rating > 0:
+    st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
+
+    # Save feedback
+    feedback_data = {
+        "Outfit Description": [st.session_state.outfit_description],
+        "Selected Vibe": [selected_vibe],
+        "Recommended Song": [st.session_state.song_name],
+        "Artist": [st.session_state.artist_name],
+        "Rating": [st.session_state.rating]
+    }
+    feedback_df = pd.DataFrame(feedback_data)
+    feedback_file = "feedback_database.csv"
+
+    try:
+        existing_df = pd.read_csv(feedback_file)
+        updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
+    except FileNotFoundError:
+        updated_df = feedback_df
+
+    updated_df.to_csv(feedback_file, index=False)
+    st.success("✅ Your feedback has been recorded successfully!")
