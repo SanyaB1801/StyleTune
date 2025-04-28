@@ -153,7 +153,7 @@ if st.session_state.output:
         if preview_url:
             st.audio(preview_url, format="audio/mp3")
         else:
-            st.warning("Preview not available for this track.")
+            st.markdown(f"Preview not available for this track. Click to listen to {st.session_state.song_name} by {st.session_state.artist_name} on Spotify!")
     else:
         st.error("❌ Couldn't find this song on Spotify.")
 
