@@ -54,87 +54,84 @@ if "track" not in st.session_state:
     st.session_state.track = None
 
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
-selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)")
+selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)", value="")
 
 if uploaded_img and st.session_state.output is None:
     st.subheader("👕 Your Uploaded Outfit")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image(uploaded_img, caption="Your outfit", use_container_width=True)
+    st.image(uploaded_img, caption="Your outfit", use_container_width=True)
 
-    with col2:
-        with st.spinner("Analyzing outfit and matching your music vibe... 🎶"):
-            progress_bar = st.progress(0)
-            for percent in range(100):
-                time.sleep(0.01)
-                progress_bar.progress(percent + 1)
+    with st.spinner("Analyzing outfit and matching your music vibe... 🎶"):
+        progress_bar = st.progress(0)
+        for percent in range(100):
+            time.sleep(0.01)
+            progress_bar.progress(percent + 1)
 
-            # 📤 Prepare image for Gemini
-            img_bytes = uploaded_img.read()
-            image_part = {
-                "mime_type": uploaded_img.type,
-                "data": img_bytes
-            }
+        # 📤 Prepare image for Gemini
+        img_bytes = uploaded_img.read()
+        image_part = {
+            "mime_type": uploaded_img.type,
+            "data": img_bytes
+        }
 
-            # 🤖 Fashion + Music Analysis Prompt
-            prompt = (
-                "You are a fashion and photography expert. Analyze the outfit in this image, "
-                "describe its style and vibe, recommend a song (include name and artist), "
-                "and suggest potential edits to enhance the image. The edits can include adjustments "
-                "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
-                "that would match the outfit's vibe. Do not give extra information or instructions. Format "
-                "the output as follows:\n\n"
-                "🧥 Outfit Description: ...\n"
-                "🎵 Recommended Song: <Song Name>\n"
-                "👤 Artist: <Artist Name>\n"
-                "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
-            )
-            try:
-                response = model.generate_content([prompt, image_part], stream=False)
-                output_text = response.text
-                st.session_state.output = output_text
+        # 🤖 Fashion + Music Analysis Prompt
+        prompt = (
+            "You are a fashion and photography expert. Analyze the outfit in this image, "
+            "describe its style and vibe, recommend a song (include name and artist), "
+            "and suggest potential edits to enhance the image. The edits can include adjustments "
+            "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
+            "that would match the outfit's vibe. Do not give extra information or instructions. Format "
+            "the output as follows:\n\n"
+            "🧥 Outfit Description: ...\n"
+            "🎵 Recommended Song: <Song Name>\n"
+            "👤 Artist: <Artist Name>\n"
+            "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
+        )
+        try:
+            response = model.generate_content([prompt, image_part], stream=False)
+            output_text = response.text
+            st.session_state.output = output_text
 
-                # ✅ Extract fields
-                outfit_desc_match = re.search(r'🧥 Outfit Description:\s*(.+)', output_text)
-                song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
-                artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
-                edits_match = re.search(r'🎨 Suggested Edits:\s*(.+)', output_text)
+            # ✅ Extract fields
+            outfit_desc_match = re.search(r'🧥 Outfit Description:\s*(.+)', output_text)
+            song_match = re.search(r'🎵 Recommended Song:\s*(.+)', output_text)
+            artist_match = re.search(r'👤 Artist:\s*(.+)', output_text)
+            edits_match = re.search(r'🎨 Suggested Edits:\s*(.+)', output_text)
 
-                if outfit_desc_match and song_match and artist_match:
-                    st.session_state.outfit_description = outfit_desc_match.group(1).strip()
-                    st.session_state.song_name = song_match.group(1).strip()
-                    st.session_state.artist_name = artist_match.group(1).strip()
-                    st.session_state.suggested_edits = edits_match.group(1).strip().split(',')
+            if outfit_desc_match and song_match and artist_match:
+                st.session_state.outfit_description = outfit_desc_match.group(1).strip()
+                st.session_state.song_name = song_match.group(1).strip()
+                st.session_state.artist_name = artist_match.group(1).strip()
+                st.session_state.suggested_edits = edits_match.group(1).strip().split(',')
 
-                    # 🔍 Search Spotify
-                    query = f"{st.session_state.song_name} {st.session_state.artist_name}"
-                    results = sp.search(q=query, type="track", limit=1)
-                    tracks = results.get('tracks', {}).get('items', [])
+                # 🔍 Search Spotify
+                query = f"{st.session_state.song_name} {st.session_state.artist_name}"
+                results = sp.search(q=query, type="track", limit=1)
+                tracks = results.get('tracks', {}).get('items', [])
 
-                    if tracks:
-                        st.session_state.track = tracks[0]
-                    else:
-                        st.session_state.track = None
+                if tracks:
+                    st.session_state.track = tracks[0]
                 else:
-                    st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
+                    st.session_state.track = None
+            else:
+                st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
 
 # --- After processing ---
 
 if st.session_state.output:
     st.success("✨ Outfit & Music Vibe Found!")
-    with st.container():
-        st.markdown(
-            f"""
-            <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
-                <h4>🧥 Outfit Description</h4>
-                <p style="color: #333;">{st.session_state.outfit_description}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+
+    st.markdown(
+        f"""
+        <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
+            <h4>🧥 Outfit Description</h4>
+            <p style="color: #333;">{st.session_state.outfit_description}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     if st.session_state.track:
         track = st.session_state.track
@@ -144,18 +141,7 @@ if st.session_state.output:
 
         st.markdown("## 🎶 Listen to Your Vibe")
 
-        col3, col4 = st.columns([1, 2])
-        with col3:
-            st.markdown(
-                f"""
-                <a href="{track_url}" target="_blank">
-                    <img src="{album_art_url}" alt="Album Art" style="width:200px; border-radius:10px; margin-top:10px;">
-                </a>
-                """,
-                unsafe_allow_html=True
-            )
-        with col4:
-            st.markdown(f"<h4>{track['name']} by {track['artists'][0]['name']}</h4>", unsafe_allow_html=True)
+        st.image(album_art_url, caption=f"{track['name']} by {track['artists'][0]['name']}", use_container_width=True)
 
         if preview_url:
             st.audio(preview_url, format="audio/mp3")
