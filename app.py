@@ -57,7 +57,7 @@ if "track" not in st.session_state:
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img is not None:
-    img = Image.open(uploaded_file)
+    img = Image.open(uploaded_img)
     st.session_state.original_image = img.copy()
 
     st.image(img, caption="Uploaded Image", use_column_width=True)
