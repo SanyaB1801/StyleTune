@@ -60,6 +60,8 @@ selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)"
 # --- Generate Button ---
 generate_button = st.button("✨ Generate Music & Vibe", disabled=not uploaded_img)
 
+# inside your generate_button block:
+
 if generate_button and uploaded_img:
     st.subheader("👕 Your Uploaded Outfit")
     st.image(uploaded_img, caption="Your outfit", use_container_width=True)
@@ -77,19 +79,20 @@ if generate_button and uploaded_img:
             "data": img_bytes
         }
 
-        # 🤖 Fashion + Music Analysis Prompt
+        # ✍️ Updated prompt that includes user-written vibe
         prompt = (
-            "You are a fashion and photography expert. Analyze the outfit in this image, "
-            "describe its style and vibe, recommend a song (include name and artist), "
-            "and suggest potential edits to enhance the image. The edits can include adjustments "
-            "to saturation, contrast, brightness, sharpness, or any other photographic enhancement "
-            "that would match the outfit's vibe. Do not give extra information or instructions. Format "
-            "the output as follows:\n\n"
+            f"You are a fashion and photography expert. Analyze the outfit in this image, "
+            f"describe its style and vibe, recommend a song (include name and artist), "
+            f"and suggest potential edits to enhance the image. "
+            f"The user is feeling a '{selected_vibe}' vibe today, so make sure the song matches this vibe. "
+            f"The edits can include adjustments to saturation, contrast, brightness, sharpness, etc. "
+            f"Format the output exactly like this:\n\n"
             "🧥 Outfit Description: ...\n"
             "🎵 Recommended Song: <Song Name>\n"
             "👤 Artist: <Artist Name>\n"
-            "🎨 Suggested Edits: <List of suggested edits such as 'Increase brightness', 'Boost contrast', etc.>"
+            "🎨 Suggested Edits: <comma-separated edits>"
         )
+
         try:
             response = model.generate_content([prompt, image_part], stream=False)
             output_text = response.text
@@ -121,7 +124,8 @@ if generate_button and uploaded_img:
         except Exception as e:
             st.error(f"❌ Error: {e}")
 
-# --- After processing ---
+# Now when showing album art:
+
 if st.session_state.output:
     st.success("✨ Outfit & Music Vibe Found!")
 
@@ -143,7 +147,8 @@ if st.session_state.output:
 
         st.markdown("## 🎶 Listen to Your Vibe")
 
-        st.image(album_art_url, caption=f"{track['name']} by {track['artists'][0]['name']}", use_container_width=True)
+        # 🔗 Clickable album art leading to Spotify
+        st.markdown(f"[![Album Art]({album_art_url})]({track_url})", unsafe_allow_html=True)
 
         if preview_url:
             st.audio(preview_url, format="audio/mp3")
@@ -152,67 +157,36 @@ if st.session_state.output:
     else:
         st.error("❌ Couldn't find this song on Spotify.")
 
-# --- Edits Section ---
-if uploaded_img and st.session_state.suggested_edits:
-    st.subheader("🎨 Suggested Edits for Your Photo")
-    for edit in st.session_state.suggested_edits:
-        st.write(f"- {edit.strip()}")
+    # 🎯 Feedback shown ONLY after track is found
+    st.subheader("⭐ Rate Your Recommendation")
 
-    proceed = st.button("✨ Apply Suggested Edits")
+    if "rating" not in st.session_state:
+        st.session_state.rating = 0
 
-    if proceed and st.session_state.edited_image is None:
-        # Reopen uploaded image
-        image = Image.open(uploaded_img)
+    cols = st.columns(5)
+    for i, col in enumerate(cols):
+        if col.button(f"{i+1} ⭐"):
+            st.session_state.rating = i + 1
 
-        for edit in st.session_state.suggested_edits:
-            if "saturation" in edit.lower():
-                enhancer = ImageEnhance.Color(image)
-                image = enhancer.enhance(1.3)
-            elif "contrast" in edit.lower():
-                enhancer = ImageEnhance.Contrast(image)
-                image = enhancer.enhance(1.2)
-            elif "brightness" in edit.lower():
-                enhancer = ImageEnhance.Brightness(image)
-                image = enhancer.enhance(1.2)
-            elif "sharpness" in edit.lower():
-                enhancer = ImageEnhance.Sharpness(image)
-                image = enhancer.enhance(1.5)
+    if st.session_state.rating > 0:
+        st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
 
-        st.session_state.edited_image = image
+        # Save feedback
+        feedback_data = {
+            "Outfit Description": [st.session_state.outfit_description],
+            "Selected Vibe": [selected_vibe],
+            "Recommended Song": [st.session_state.song_name],
+            "Artist": [st.session_state.artist_name],
+            "Rating": [st.session_state.rating]
+        }
+        feedback_df = pd.DataFrame(feedback_data)
+        feedback_file = "feedback_database.csv"
 
-    if st.session_state.edited_image:
-        st.image(st.session_state.edited_image, caption="Edited Image", use_container_width=True)
+        try:
+            existing_df = pd.read_csv(feedback_file)
+            updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
+        except FileNotFoundError:
+            updated_df = feedback_df
 
-# --- Rating ---
-st.subheader("⭐ Rate Your Recommendation")
-
-if "rating" not in st.session_state:
-    st.session_state.rating = 0
-
-cols = st.columns(5)
-for i, col in enumerate(cols):
-    if col.button(f"{i+1} ⭐"):
-        st.session_state.rating = i + 1
-
-if st.session_state.rating > 0:
-    st.success(f"Thanks for rating {st.session_state.rating} star(s)! ⭐")
-
-    # Save feedback
-    feedback_data = {
-        "Outfit Description": [st.session_state.outfit_description],
-        "Selected Vibe": [selected_vibe],
-        "Recommended Song": [st.session_state.song_name],
-        "Artist": [st.session_state.artist_name],
-        "Rating": [st.session_state.rating]
-    }
-    feedback_df = pd.DataFrame(feedback_data)
-    feedback_file = "feedback_database.csv"
-
-    try:
-        existing_df = pd.read_csv(feedback_file)
-        updated_df = pd.concat([existing_df, feedback_df], ignore_index=True)
-    except FileNotFoundError:
-        updated_df = feedback_df
-
-    updated_df.to_csv(feedback_file, index=False)
-    st.success("✅ Your feedback has been recorded successfully!")
+        updated_df.to_csv(feedback_file, index=False)
+        st.success("✅ Your feedback has been recorded successfully!")
