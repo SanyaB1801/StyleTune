@@ -199,7 +199,7 @@ if st.session_state.output and st.session_state.suggested_edits:
                 enhancer = ImageEnhance.Sharpness(edited_image)
                 edited_image = enhancer.enhance(2.0)
     
-        st.image(edited_image, caption="✨ Edited Image", use_column_width=True)
+        st.image(edited_image, caption="✨ Edited Image", use_container_width=True)
     
     # 🎯 Feedback shown ONLY after track is found
     st.subheader("⭐ Rate Your Recommendation")
