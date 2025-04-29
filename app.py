@@ -59,8 +59,6 @@ uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "j
 if uploaded_img is not None:
     img = Image.open(uploaded_img)
     st.session_state.original_image = img.copy()
-
-    st.image(img, caption="Uploaded Image", use_container_width=True)
     
 selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)", value="")
 
