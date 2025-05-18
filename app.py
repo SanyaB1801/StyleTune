@@ -161,7 +161,7 @@ if st.session_state.output:
         track_url = track['external_urls']['spotify']
         album_art_url = track['album']['images'][0]['url']
 
-        st.markdown("## 🎶 Listen to Your Vibe")
+        st.markdown(f"## 🎶 Listen to Your Vibe - ({query})")
 
         # 🔗 Clickable album art leading to Spotify
         st.markdown(f"[![Album Art]({album_art_url})]({track_url})", unsafe_allow_html=True)
