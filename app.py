@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import time
 import pandas as pd
+from youtubesearchpython import VideosSearch
 
 # 🔑 Load API keys
 load_dotenv()
@@ -52,12 +53,15 @@ if "artist_name" not in st.session_state:
     st.session_state.artist_name = ""
 if "track" not in st.session_state:
     st.session_state.track = None
+if "youtube_url" not in st.session_state:
+    st.session_state.youtube_url = None
 
 # Upload image and enter vibe
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img is not None:
-    img = Image.open(uploaded_img)
+    img_bytes = uploaded_img.read()
+    img = Image.open(io.BytesIO(img_bytes))
     st.session_state.original_image = img.copy()
     
 selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)", value="")
@@ -77,8 +81,6 @@ if generate_button and uploaded_img:
             time.sleep(0.01)
             progress_bar.progress(percent + 1)
 
-        # 📤 Prepare image for Gemini
-        img_bytes = uploaded_img.read()
         image_part = {
             "mime_type": uploaded_img.type,
             "data": img_bytes
@@ -124,6 +126,15 @@ if generate_button and uploaded_img:
                     st.session_state.track = tracks[0]
                 else:
                     st.session_state.track = None
+                # 🔍 YouTube Search
+                videos_search = VideosSearch(query, limit=1)
+                youtube_results = videos_search.result().get('result', [])
+                
+                if youtube_results:
+                    st.session_state.youtube_url = youtube_results[0]['link']
+                else:
+                    st.session_state.youtube_url = None
+
             else:
                 st.warning("⚠️ Couldn't extract outfit or song details correctly. Try a different image!")
         except Exception as e:
@@ -158,11 +169,15 @@ if st.session_state.output:
         if preview_url:
             st.audio(preview_url, format="audio/mp3")
         else:
-            st.warning(f"Click to listen to this song on Spotify!")
+            st.warning(f"Click album to listen to this song on Spotify!")
+        # 🔗 YouTube Link
+        if st.session_state.youtube_url:
+            st.markdown(f"📺 Prefer YouTube? [Watch it here]({st.session_state.youtube_url})")
+
     else:
         st.error("❌ Couldn't find this song on Spotify.")
 
-    # After recommending songs and all that
+    # After recommending songs
 
 # Show suggested edits
 if st.session_state.output and st.session_state.suggested_edits:
