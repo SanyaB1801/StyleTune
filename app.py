@@ -60,7 +60,8 @@ if "youtube_url" not in st.session_state:
 uploaded_img = st.file_uploader("📸 Upload your outfit image", type=["jpg", "jpeg", "png"])
 
 if uploaded_img is not None:
-    img = Image.open(uploaded_img)
+    img_bytes = uploaded_img.read()
+    img = Image.open(io.BytesIO(img_bytes))
     st.session_state.original_image = img.copy()
     
 selected_vibe = st.text_input("🎧 What vibe are you feeling today? (optional)", value="")
