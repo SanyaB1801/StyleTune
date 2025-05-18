@@ -81,8 +81,6 @@ if generate_button and uploaded_img:
             time.sleep(0.01)
             progress_bar.progress(percent + 1)
 
-        # 📤 Prepare image for Gemini
-        img_bytes = uploaded_img.read()
         image_part = {
             "mime_type": uploaded_img.type,
             "data": img_bytes
